@@ -1,0 +1,201 @@
+// ==UserScript==
+// @name         Render LaTeX in NotebookLM (Precise Fix)
+// @namespace    http://tampermonkey.net/
+// @version      2.1.0
+// @description  基于真实DOM结构的精准修复
+// @author       ergs0204 (with precise DOM structure fix)
+// @match        https://notebooklm.google.com/*
+// @grant        GM_addStyle
+// @require      https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/katex.min.js
+// @require      https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/contrib/auto-render.min.js
+// @resource     katexCSS https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/katex.min.css
+// @license      MIT
+// ==/UserScript==
+
+/* global renderMathInElement */
+
+(function () {
+    'use strict';
+
+    const addKaTeXStyles = () => {
+        const katexLink = document.createElement('link');
+        katexLink.rel = 'stylesheet';
+        katexLink.href = 'https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/katex.min.css';
+        document.head.appendChild(katexLink);
+    };
+
+    const addCustomStyles = () => {
+        const css = `.katex { vertical-align: -0.1em; }`;
+        GM_addStyle(css);
+    };
+
+    // 精准修复：基于真实的DOM结构
+    const fixFragmentedLatex = (container) => {
+        // 查找所有class包含"ng-star-inserted"的span元素
+        const spans = Array.from(container.querySelectorAll('span.ng-star-inserted'));
+        
+        for (let i = 0; i < spans.length; i++) {
+            const currentSpan = spans[i];
+            
+            // 检查是否是$$开始的span
+            if (currentSpan.textContent.trim() === '$$') {
+                console.log('[LaTeX Fix] 发现$$开始标记');
+                
+                let latexContent = '$$';
+                let endIndex = -1;
+                let spansToRemove = [currentSpan];
+                
+                // 向后查找到$$结束标记
+                for (let j = i + 1; j < spans.length; j++) {
+                    const nextSpan = spans[j];
+                    const nextText = nextSpan.textContent;
+                    
+                    spansToRemove.push(nextSpan);
+                    
+                    if (nextText.trim() === '$$') {
+                        latexContent += '$$';
+                        endIndex = j;
+                        console.log('[LaTeX Fix] 发现$$结束标记');
+                        break;
+                    } else {
+                        // 添加内容（包括空格）
+                        latexContent += nextText;
+                    }
+                    
+                    // 安全限制：最多查找10个span，避免无限循环
+                    if (j - i > 10) {
+                        console.log('[LaTeX Fix] 查找范围超限，跳过');
+                        break;
+                    }
+                }
+                
+                // 如果找到了完整的$$...$$结构
+                if (endIndex !== -1 && latexContent.length > 4) {
+                    console.log('[LaTeX Fix] 重构公式:', latexContent);
+                    
+                    // 创建新的包含完整LaTeX的span
+                    const newSpan = document.createElement('span');
+                    newSpan.textContent = latexContent;
+                    newSpan.className = 'latex-reconstructed ng-star-inserted';
+                    
+                    // 插入新span并移除旧的spans
+                    currentSpan.parentNode.insertBefore(newSpan, currentSpan);
+                    spansToRemove.forEach(span => span.remove());
+                    
+                    // 更新循环索引，跳过已处理的spans
+                    i = endIndex;
+                    
+                    // 一次只处理一个公式，避免性能问题
+                    break;
+                }
+            }
+        }
+    };
+
+    const preprocessAndSanitize = (node) => {
+        if (node.nodeType === Node.TEXT_NODE) {
+            let originalText = node.nodeValue;
+            let newText = originalText;
+
+            const displayMathRegex = /\$\$(.*?)\$\$/gs;
+            let tempTextForDisplay = newText;
+            let match_display;
+            while ((match_display = displayMathRegex.exec(tempTextForDisplay)) !== null) {
+                const content = match_display[1].trim();
+                const isComplex = content.length > 25 || content.includes('\\begin') || content.includes('\\frac') || content.includes('\\sum') || content.includes('\\int') || content.includes('\\lim') || content.includes('\\\\') || content.split(' ').length > 4;
+                if (!isComplex) {
+                    newText = newText.replace(`$$${match_display[1]}$$`, `$${content}$`);
+                }
+            }
+
+            if (newText !== originalText) {
+                node.nodeValue = newText;
+            }
+        } else if (node.nodeType === Node.ELEMENT_NODE) {
+            if (['SCRIPT', 'STYLE', 'TEXTAREA', 'PRE', 'CODE'].includes(node.tagName)) {
+                return;
+            }
+            for (const child of Array.from(node.childNodes)) {
+                preprocessAndSanitize(child);
+            }
+        }
+    };
+
+    const ignoreClass = 'katex-ignore-active-render';
+    const katexOptions = {
+        delimiters: [
+            { left: "$$", right: "$$", display: true }, 
+            { left: "$", right: "$", display: false },
+            { left: "\\(", right: "\\)", display: false }, 
+            { left: "\\[", right: "\\]", display: true }
+        ],
+        ignoredClasses: [ignoreClass, 'katex-display'],
+        throwOnError: false
+    };
+
+    let renderTimeout;
+    const renderPageWithIgnore = () => {
+        const activeEl = document.activeElement;
+        let hasIgnoreClass = false;
+        try {
+            if (activeEl && (activeEl.isContentEditable || activeEl.tagName === 'TEXTAREA' || activeEl.tagName === 'INPUT')) {
+                activeEl.classList.add(ignoreClass);
+                hasIgnoreClass = true;
+            }
+            
+            // 步骤1：修复分片的LaTeX
+            fixFragmentedLatex(document.body);
+            
+            // 步骤2：预处理
+            preprocessAndSanitize(document.body);
+            
+            // 步骤3：KaTeX渲染
+            renderMathInElement(document.body, katexOptions);
+            
+            console.log('[LaTeX Renderer] 完整渲染流程完成');
+        } catch (e) {
+            console.error("KaTeX render error:", e);
+        } finally {
+            if (hasIgnoreClass && activeEl) {
+                activeEl.classList.remove(ignoreClass);
+            }
+        }
+    };
+
+    // 手动渲染按钮
+    const addManualRenderButton = () => {
+        if (document.getElementById('latex-manual-render')) return;
+        
+        const button = document.createElement('button');
+        button.id = 'latex-manual-render';
+        button.textContent = '🔄 修复LaTeX';
+        button.style.cssText = `
+            position: fixed; top: 10px; right: 10px; z-index: 10000;
+            background: #4285f4; color: white; border: none;
+            padding: 6px 10px; border-radius: 4px; cursor: pointer;
+            font-size: 11px; font-family: sans-serif;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        `;
+        button.onclick = () => {
+            console.log('[LaTeX Renderer] === 手动修复开始 ===');
+            renderPageWithIgnore();
+        };
+        document.body.appendChild(button);
+    };
+
+    const observer = new MutationObserver(() => {
+        clearTimeout(renderTimeout);
+        renderTimeout = setTimeout(renderPageWithIgnore, 600);
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+
+    window.addEventListener('load', () => {
+        addKaTeXStyles();
+        addCustomStyles();
+        setTimeout(() => {
+            renderPageWithIgnore();
+            addManualRenderButton();
+        }, 2000); // 延迟2秒确保页面完全加载
+    });
+
+})();

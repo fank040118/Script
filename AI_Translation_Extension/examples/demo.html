@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Translation Extension - Demo Page</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .header {
+            background: #f0f8ff;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .content-section {
+            margin-bottom: 30px;
+            padding: 15px;
+            border-left: 4px solid #007cba;
+            background: #f9f9f9;
+        }
+        .demo-note {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+        h1, h2, h3 {
+            color: #333;
+        }
+        code {
+            background: #f1f1f1;
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>AI Translation Extension Demo</h1>
+        <p>This page demonstrates the functionality of the AI Translation userscript extension.</p>
+    </div>
+
+    <div class="demo-note">
+        <strong>Note:</strong> To see the translation in action, you need to install the userscript in Tampermonkey/Greasemonkey and configure your AI API credentials in the settings panel.
+    </div>
+
+    <div class="content-section">
+        <h2>English Content Example</h2>
+        <p>Welcome to the AI Translation Extension demonstration. This extension allows you to translate web content using your own AI API key and base URL. The extension intelligently segments long text into manageable chunks and translates them sequentially.</p>
+        
+        <p>Here are some key features of this extension:</p>
+        <ul>
+            <li>Customizable API integration with your own OpenAI-compatible endpoint</li>
+            <li>Automatic text segmentation for optimal translation quality</li>
+            <li>Non-destructive translation display - original content remains intact</li>
+            <li>Debug panel for monitoring translation progress and troubleshooting</li>
+            <li>Rate limiting to prevent API abuse</li>
+        </ul>
+    </div>
+
+    <div class="content-section">
+        <h2>Technical Implementation</h2>
+        <p>The extension uses a sophisticated text segmentation algorithm that respects sentence boundaries and maintains context. It processes text nodes in the DOM tree while avoiding script tags, style elements, and form inputs.</p>
+        
+        <p>Translation results are displayed in styled containers below the original content, making it easy to compare the original and translated text. The extension also includes comprehensive error handling and user feedback mechanisms.</p>
+    </div>
+
+    <div class="content-section">
+        <h2>Configuration Options</h2>
+        <p>Users can configure the following settings through the extension's settings panel:</p>
+        <ul>
+            <li><strong>API Key:</strong> Your OpenAI or compatible API key</li>
+            <li><strong>Base URL:</strong> The API endpoint URL (defaults to OpenAI's endpoint)</li>
+            <li><strong>Enable/Disable:</strong> Toggle translation functionality</li>
+            <li><strong>Debug Mode:</strong> Enable detailed logging and debug panel</li>
+        </ul>
+    </div>
+
+    <div class="content-section">
+        <h2>Usage Instructions</h2>
+        <ol>
+            <li>Install the userscript in Tampermonkey or Greasemonkey</li>
+            <li>Navigate to any webpage</li>
+            <li>Click on the "Settings" button in the floating control panel</li>
+            <li>Enter your API key and configure the base URL</li>
+            <li>Save the settings and test the API connection</li>
+            <li>Click "Translate Page" to translate the current page content</li>
+            <li>Use the Debug panel to monitor translation progress if needed</li>
+        </ol>
+    </div>
+
+    <div class="content-section">
+        <h2>Sample Text for Translation Testing</h2>
+        <p>The quick brown fox jumps over the lazy dog. This is a pangram sentence that contains every letter of the English alphabet. It's commonly used for testing fonts, keyboards, and other systems that process text.</p>
+        
+        <p>Machine translation has come a long way since its inception. Modern AI-powered translation systems can handle context, idioms, and cultural nuances much better than their predecessors. However, human oversight is still valuable for ensuring accuracy and cultural appropriateness.</p>
+        
+        <p>This extension bridges the gap between automated translation and user control, allowing you to leverage powerful AI models while maintaining privacy and customization through your own API credentials.</p>
+    </div>
+
+    <div class="content-section">
+        <h2>Privacy and Security</h2>
+        <p>This extension respects user privacy by allowing you to use your own AI API credentials. No data is sent to third-party services except the translation API you configure. All settings are stored locally in your browser using Greasemonkey's secure storage mechanism.</p>
+    </div>
+
+    <script>
+        // Simple script to demonstrate that the extension avoids script content
+        console.log('Demo page loaded - this script content will not be translated');
+        
+        // Add some dynamic content
+        document.addEventListener('DOMContentLoaded', function() {
+            const dynamicContent = document.createElement('div');
+            dynamicContent.className = 'content-section';
+            dynamicContent.innerHTML = `
+                <h2>Dynamically Added Content</h2>
+                <p>This content was added dynamically via JavaScript. The AI Translation Extension can handle both static and dynamically generated content, making it suitable for modern web applications.</p>
+            `;
+            document.body.appendChild(dynamicContent);
+        });
+    </script>
+</body>
+</html>
